@@ -143,6 +143,9 @@ class MenuBar extends Widget {
     // Update the active index.
     this._activeIndex = value;
 
+    // Update focus to new active index
+    this._menus[this._activeIndex]!.node.focus();
+
     // Schedule an update of the items.
     this.update();
   }
@@ -403,7 +406,11 @@ class MenuBar extends Widget {
     for (let i = 0, n = menus.length; i < n; ++i) {
       let title = menus[i].title;
       let active = i === activeIndex;
-      content[i] = renderer.renderItem({ title, active });
+      content[i] = renderer.renderItem({
+        title,
+        active,
+        onfocus: () => { this.activeIndex = i }
+      });
     }
     VirtualDOM.render(content, this.contentNode);
   }
@@ -412,6 +419,10 @@ class MenuBar extends Widget {
    * Handle the `'keydown'` event for the menu bar.
    */
   private _evtKeyDown(event: KeyboardEvent): void {
+    if (event.keyCode === 9) {
+      return;
+    }
+
     // A menu bar handles all keydown events.
     event.preventDefault();
     event.stopPropagation();
@@ -730,6 +741,8 @@ namespace MenuBar {
      * Whether the item is the active item.
      */
     readonly active: boolean;
+
+    readonly onfocus?: (event: FocusEvent) => void;
   }
 
   /**
@@ -772,7 +785,7 @@ namespace MenuBar {
       let dataset = this.createItemDataset(data);
       let aria = this.createItemARIA(data);
       return (
-        h.li({ className, dataset, ...aria },
+        h.li({ className, dataset, tabindex: '0', onfocus: data.onfocus, ...aria },
           this.renderIcon(data),
           this.renderLabel(data)
         )
@@ -938,6 +951,7 @@ namespace Private {
     node.appendChild(content);
     content.setAttribute('role', 'menubar');
     node.tabIndex = 0;
+    content.tabIndex = 0;
     return node;
   }
 

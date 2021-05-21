@@ -220,6 +220,8 @@ class Menu extends Widget {
     // Update the active index.
     this._activeIndex = value;
 
+    (this.contentNode.childNodes[this._activeIndex] as HTMLElement).focus();
+
     // schedule an update of the items.
     this.update();
   }
@@ -541,7 +543,14 @@ class Menu extends Widget {
       let item = items[i];
       let active = i === activeIndex;
       let collapsed = collapsedFlags[i];
-      content[i] = renderer.renderItem({ item, active, collapsed });
+      content[i] = renderer.renderItem({
+        item,
+        active,
+        collapsed,
+        onfocus: () => {
+          this.activeIndex = i;
+        }
+      });
     }
     VirtualDOM.render(content, this.contentNode);
   }
@@ -591,6 +600,10 @@ class Menu extends Widget {
    * This listener is attached to the menu node.
    */
   private _evtKeyDown(event: KeyboardEvent): void {
+    if (event.keyCode === 9) {
+      return;
+    }
+
     // A menu handles all keydown events.
     event.preventDefault();
     event.stopPropagation();
@@ -1109,6 +1122,8 @@ namespace Menu {
      * Whether the item should be collapsed.
      */
     readonly collapsed: boolean;
+
+    readonly onfocus?: () => void;
   }
 
   /**
@@ -1151,7 +1166,14 @@ namespace Menu {
       let dataset = this.createItemDataset(data);
       let aria = this.createItemARIA(data);
       return (
-        h.li({ className, dataset, ...aria },
+        h.li(
+          {
+            className,
+            dataset,
+            tabindex: '0',
+            onfocus: data.onfocus,
+            ...aria
+          },
           this.renderIcon(data),
           this.renderLabel(data),
           this.renderShortcut(data),
@@ -1335,8 +1357,14 @@ namespace Menu {
         break;
       case 'submenu':
         aria['aria-haspopup'] = 'true';
+        if (!data.item.isEnabled) {
+          aria['aria-disabled'] = 'true';
+        }
         break;
       default:
+        if (!data.item.isEnabled) {
+          aria['aria-disabled'] = 'true';
+        }
         aria.role = 'menuitem';
       }
       return aria;
@@ -1425,7 +1453,8 @@ namespace Private {
     /* </DEPRECATED> */
     node.appendChild(content);
     content.setAttribute('role', 'menu');
-    node.tabIndex = -1;
+    content.tabIndex = 0;
+    node.tabIndex = 0;
     return node;
   }
 
